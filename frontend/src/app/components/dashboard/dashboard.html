@@ -1,0 +1,294 @@
+<div class="dashboard-container">
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="logo-icon">&#10024;</span>
+      <span class="logo-text">Binaried Tasks</span>
+    </div>
+    
+    <div class="user-profile">
+      <span class="user-email">{{ userEmail() }}</span>
+      <button class="btn btn-logout" (click)="logout()">
+        <span class="btn-icon">&#10140;</span> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    
+    <!-- Stats Board -->
+    <section class="stats-board">
+      <div class="stat-card">
+        <div class="stat-info">
+          <h3>Total Tasks</h3>
+          <p class="stat-number">{{ totalCount() }}</p>
+        </div>
+        <div class="stat-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="completionPercentage()"></div>
+          </div>
+          <span class="progress-label">{{ completionPercentage() }}% Completed</span>
+        </div>
+      </div>
+      
+      <div class="stat-grid">
+        <div class="mini-stat todo">
+          <span class="mini-title">To Do</span>
+          <span class="mini-number">{{ todoCount() }}</span>
+        </div>
+        <div class="mini-stat progress-active">
+          <span class="mini-title">In Progress</span>
+          <span class="mini-number">{{ inProgressCount() }}</span>
+        </div>
+        <div class="mini-stat completed">
+          <span class="mini-title">Completed</span>
+          <span class="mini-number">{{ doneCount() }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toolbar: Search, Filters, and Add Task -->
+    <section class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">&#128269;</span>
+        <input 
+          type="text" 
+          placeholder="Search tasks..." 
+          [value]="searchQuery()" 
+          (input)="onSearch($event)"
+        />
+      </div>
+
+      <div class="filter-controls">
+        <div class="filter-group">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter" [value]="filterStatus()" (change)="onFilterStatusChange($any($event.target).value)">
+            <option value="all">All Statuses</option>
+            <option value="todo">To Do</option>
+            <option value="in-progress">In Progress</option>
+            <option value="done">Completed</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="priorityFilter">Priority</label>
+          <select id="priorityFilter" [value]="filterPriority()" (change)="onFilterPriorityChange($any($event.target).value)">
+            <option value="all">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <button class="btn btn-add" (click)="openCreateModal()">
+          <span class="plus-icon">+</span> New Task
+        </button>
+      </div>
+    </section>
+
+    <!-- Error message alert -->
+    @if (errorMessage()) {
+      <div class="alert alert-error">
+        <span>&#9888;</span>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    <!-- Task Board Columns -->
+    <section class="board-columns">
+      <!-- To Do Column -->
+      <div class="board-column">
+        <div class="column-header">
+          <span class="column-dot todo"></span>
+          <h2>To Do</h2>
+          <span class="column-count">{{ tasks().length > 0 ? (tasks() | filterStatusPipe:'todo').length : 0 }}</span>
+        </div>
+        <div class="task-list">
+          @for (task of tasks() | filterStatusPipe:'todo'; track task._id) {
+            <div class="task-card" [class.high-priority]="task.priority === 'high'">
+              <div class="task-card-header">
+                <span class="priority-badge" [class]="task.priority">{{ task.priority }}</span>
+                <div class="task-actions">
+                  <button class="action-btn edit" (click)="openEditModal(task)" title="Edit Task">&#9998;</button>
+                  <button class="action-btn delete" (click)="deleteTask(task._id)" title="Delete Task">&#128465;</button>
+                </div>
+              </div>
+              <h3>{{ task.title }}</h3>
+              <p class="description">{{ task.description || 'No description provided.' }}</p>
+              
+              <div class="task-card-footer">
+                @if (task.dueDate) {
+                  <span class="due-date" [class.overdue]="(task.dueDate | isOverduePipe)">
+                    &#128197; {{ task.dueDate | date:'mediumDate' }}
+                  </span>
+                } @else {
+                  <span></span>
+                }
+                <button class="btn btn-move" (click)="updateTaskStatus(task, 'in-progress')" title="Move to In Progress">
+                  Start &rarr;
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-column-message">No tasks in this stage</div>
+          }
+        </div>
+      </div>
+
+      <!-- In Progress Column -->
+      <div class="board-column">
+        <div class="column-header">
+          <span class="column-dot progress-active"></span>
+          <h2>In Progress</h2>
+          <span class="column-count">{{ tasks().length > 0 ? (tasks() | filterStatusPipe:'in-progress').length : 0 }}</span>
+        </div>
+        <div class="task-list">
+          @for (task of tasks() | filterStatusPipe:'in-progress'; track task._id) {
+            <div class="task-card" [class.high-priority]="task.priority === 'high'">
+              <div class="task-card-header">
+                <span class="priority-badge" [class]="task.priority">{{ task.priority }}</span>
+                <div class="task-actions">
+                  <button class="action-btn edit" (click)="openEditModal(task)" title="Edit Task">&#9998;</button>
+                  <button class="action-btn delete" (click)="deleteTask(task._id)" title="Delete Task">&#128465;</button>
+                </div>
+              </div>
+              <h3>{{ task.title }}</h3>
+              <p class="description">{{ task.description || 'No description provided.' }}</p>
+              
+              <div class="task-card-footer">
+                @if (task.dueDate) {
+                  <span class="due-date" [class.overdue]="(task.dueDate | isOverduePipe)">
+                    &#128197; {{ task.dueDate | date:'mediumDate' }}
+                  </span>
+                } @else {
+                  <span></span>
+                }
+                <div class="move-actions">
+                  <button class="btn btn-move-back" (click)="updateTaskStatus(task, 'todo')" title="Move to To Do">
+                    &larr;
+                  </button>
+                  <button class="btn btn-move" (click)="updateTaskStatus(task, 'done')" title="Complete Task">
+                    Complete &rarr;
+                  </button>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-column-message">No tasks in progress</div>
+          }
+        </div>
+      </div>
+
+      <!-- Completed Column -->
+      <div class="board-column">
+        <div class="column-header">
+          <span class="column-dot completed"></span>
+          <h2>Completed</h2>
+          <span class="column-count">{{ tasks().length > 0 ? (tasks() | filterStatusPipe:'done').length : 0 }}</span>
+        </div>
+        <div class="task-list">
+          @for (task of tasks() | filterStatusPipe:'done'; track task._id) {
+            <div class="task-card completed-task">
+              <div class="task-card-header">
+                <span class="priority-badge" [class]="task.priority">{{ task.priority }}</span>
+                <div class="task-actions">
+                  <button class="action-btn edit" (click)="openEditModal(task)" title="Edit Task">&#9998;</button>
+                  <button class="action-btn delete" (click)="deleteTask(task._id)" title="Delete Task">&#128465;</button>
+                </div>
+              </div>
+              <h3>{{ task.title }}</h3>
+              <p class="description">{{ task.description || 'No description provided.' }}</p>
+              
+              <div class="task-card-footer">
+                @if (task.dueDate) {
+                  <span class="due-date">
+                    &#128197; {{ task.dueDate | date:'mediumDate' }}
+                  </span>
+                } @else {
+                  <span></span>
+                }
+                <button class="btn btn-move-back" (click)="updateTaskStatus(task, 'in-progress')" title="Reopen Task">
+                  &larr; Reopen
+                </button>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-column-message">No completed tasks</div>
+          }
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Create/Edit Modal Backdrop & Card -->
+  @if (isModalOpen()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ editingTask() ? 'Edit Task' : 'New Task' }}</h2>
+          <button class="close-btn" (click)="closeModal()">&times;</button>
+        </div>
+        <form [formGroup]="taskForm" (ngSubmit)="saveTask()" class="modal-form">
+          <div class="form-group">
+            <label for="taskTitle">Title</label>
+            <input 
+              type="text" 
+              id="taskTitle" 
+              formControlName="title" 
+              placeholder="E.g., Design UI layout"
+              [class.invalid]="taskForm.get('title')?.touched && taskForm.get('title')?.invalid"
+            />
+            @if (taskForm.get('title')?.touched && taskForm.get('title')?.errors?.['required']) {
+              <span class="error-text">Title is required</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="taskDesc">Description</label>
+            <textarea 
+              id="taskDesc" 
+              formControlName="description" 
+              placeholder="What needs to be done?"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="taskPriority">Priority</label>
+              <select id="taskPriority" formControlName="priority">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="taskStatus">Status</label>
+              <select id="taskStatus" formControlName="status">
+                <option value="todo">To Do</option>
+                <option value="in-progress">In Progress</option>
+                <option value="done">Completed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="taskDueDate">Due Date</label>
+            <input 
+              type="date" 
+              id="taskDueDate" 
+              formControlName="dueDate"
+            />
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
